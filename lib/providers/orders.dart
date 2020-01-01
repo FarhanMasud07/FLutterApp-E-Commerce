@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:practiceflutter/providers/cart.dart';
+import 'package:http/http.dart' as http;
 
 class OrderItem {
   final String id;
@@ -23,6 +26,14 @@ class Orders with ChangeNotifier {
   }
 
   void addOrder(List<CartItem> cartProducts, double total) {
+    const url = 'https://fluttertest-7ec69.firebaseio.com/orders.json';
+    http.post(
+      url,
+      body: json.encode({
+        'price': total,
+        'dateTime': DateTime.now().toIso8601String(),
+      }),
+    );
     _orders.insert(
       0,
       OrderItem(
