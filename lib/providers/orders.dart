@@ -25,24 +25,63 @@ class Orders with ChangeNotifier {
     return [..._orders];
   }
 
-  void addOrder(List<CartItem> cartProducts, double total) {
+  Future<void> addOrder(List<CartItem> cartProducts, double total) async {
     const url = 'https://fluttertest-7ec69.firebaseio.com/orders.json';
-    http.post(
+    final timeStamp = DateTime.now();
+    final res = await http.post(
       url,
       body: json.encode({
         'price': total,
-        'dateTime': DateTime.now().toIso8601String(),
+        'dateTime': timeStamp.toIso8601String(),
+        'products': cartProducts
+            .map((cp) => {
+                  'id': cp.id,
+                  'title': cp.title,
+                  'quantity': cp.quantity,
+                  'price': cp.price,
+                })
+            .toList(),
       }),
     );
     _orders.insert(
       0,
       OrderItem(
-        id: DateTime.now().toString(),
+        id: json.decode(res.body)['name'],
         price: total,
-        datetime: DateTime.now(),
+        datetime: timeStamp,
         products: cartProducts,
       ),
     );
+    notifyListeners();
+  }
+
+  Future<void> fetchAndSetOrders() async {
+    const url = 'https://fluttertest-7ec69.firebaseio.com/orders.json';
+    final res = await http.get(url);
+    //print(json.decode(res.body));
+    final List<OrderItem> loadedOrders = [];
+    final extractedData = json.decode(res.body) as Map<String, dynamic>;
+    if (extractedData == null) {
+      return;
+    }
+    extractedData.forEach((orderId, orderData) {
+      loadedOrders.add(
+        OrderItem(
+          id: orderId,
+          price: orderData['price'],
+          datetime: DateTime.parse(orderData['dateTime']),
+          products: (orderData['products'] as List<dynamic>)
+              .map((item) => CartItem(
+                    id: item['id'],
+                    price: item['price'],
+                    quantity: item['quantity'],
+                    title: item['title'],
+                  ))
+              .toList(),
+        ),
+      );
+    });
+    _orders = loadedOrders;
     notifyListeners();
   }
 }
